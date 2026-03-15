@@ -1,30 +1,37 @@
 const TranslationHistory = require('../models/TranslationHistory');
+const Translation = require('../models/Translation');
 const axios = require('axios');
 
-const LIBRE_API_URL = 'https://libretranslate.de';
+// Switched to Lingva (Google Translate Mirror) for better stability
+const LINGVA_API_URL = 'https://lingva.ml/api/v1';
 
 const getLanguages = async (req, res) => {
+    // Fallback languages
+    const fallbackLanguages = [
+        { code: 'en', name: 'English' },
+        { code: 'es', name: 'Spanish' },
+        { code: 'fr', name: 'French' },
+        { code: 'de', name: 'German' },
+        { code: 'it', name: 'Italian' },
+        { code: 'pt', name: 'Portuguese' },
+        { code: 'ru', name: 'Russian' },
+        { code: 'zh', name: 'Chinese' },
+        { code: 'ja', name: 'Japanese' },
+        { code: 'ko', name: 'Korean' },
+        { code: 'ar', name: 'Arabic' },
+        { code: 'hi', name: 'Hindi' },
+    ];
+
     try {
-        const response = await axios.get(`${LIBRE_API_URL}/languages`);
-        // LibreTranslate returns [{code: 'en', name: 'English'}, ...]
-        res.json(response.data);
+        const response = await axios.get(`${LINGVA_API_URL}/languages`);
+        // Lingva returns { languages: [...] }
+        if (response.data && Array.isArray(response.data.languages)) {
+            res.json(response.data.languages);
+        } else {
+            res.json(fallbackLanguages);
+        }
     } catch (error) {
-        console.error('Error fetching languages from LibreTranslate:', error.message);
-        // Fallback languages in case API is down
-        const fallbackLanguages = [
-            { code: 'en', name: 'English' },
-            { code: 'es', name: 'Spanish' },
-            { code: 'fr', name: 'French' },
-            { code: 'de', name: 'German' },
-            { code: 'it', name: 'Italian' },
-            { code: 'pt', name: 'Portuguese' },
-            { code: 'ru', name: 'Russian' },
-            { code: 'zh', name: 'Chinese' },
-            { code: 'ja', name: 'Japanese' },
-            { code: 'ko', name: 'Korean' },
-            { code: 'ar', name: 'Arabic' },
-            { code: 'hi', name: 'Hindi' },
-        ];
+        console.error('Error fetching languages from Lingva:', error.message);
         res.json(fallbackLanguages);
     }
 };
@@ -37,38 +44,40 @@ const translateText = async (req, res) => {
     }
 
     try {
-        // LibreTranslate API
-        const response = await axios.post(`${LIBRE_API_URL}/translate`, {
-            q: text,
-            source: source,
-            target: target,
-            format: 'text'
-        });
+        // Lingva API Format: /api/v1/:source/:target/:text
+        const encodedText = encodeURIComponent(text);
+        const response = await axios.get(`${LINGVA_API_URL}/${source}/${target}/${encodedText}`);
 
-        if (response.data && response.data.translatedText) {
-            const translatedText = response.data.translatedText;
+        if (response.data && response.data.translation) {
+            const translatedText = response.data.translation;
 
-            const newTranslation = new TranslationHistory({
+            // Save to Translation (Persistent)
+            const permanentTranslation = new Translation({
+                originalText: text,
+                translatedText: translatedText,
+                sourceLanguage: source,
+                targetLanguage: target
+            });
+            await permanentTranslation.save();
+
+            // Save to TranslationHistory (Temporary - 5m TTL)
+            const historyItem = new TranslationHistory({
                 sourceText: text,
                 translatedText: translatedText,
                 sourceLanguage: source,
                 targetLanguage: target
             });
-
-            await newTranslation.save();
+            await historyItem.save();
 
             res.json({ translatedText });
-        } else {
-            throw new Error('Invalid response from LibreTranslate API');
+        }
+ else {
+            throw new Error('Invalid response from Lingva API');
         }
 
     } catch (error) {
-        console.error('Error translating text with LibreTranslate:', error.message);
-        // If the main instance is rate limited (common for libretranslate.de), we could log that
-        if (error.response && error.response.status === 429) {
-            return res.status(429).json({ error: 'LibreTranslate Rate Limited. Please try again later.' });
-        }
-        res.status(500).json({ error: 'Translation failed' });
+        console.error('Error translating text with Lingva:', error.message);
+        res.status(500).json({ error: 'Translation failed', message: error.message });
     }
 };
 

@@ -2,14 +2,109 @@ import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { ArrowLeftRight, Copy, Moon, Sun, Loader2, ChevronDown, Search, Check } from 'lucide-react';
 import './App.css';
-import PixelSnow from './PixelSnow';
 import Squares from './Squares';
 
 const API_URL = 'http://localhost:5000/api';
 
+const SearchableLanguageSelect = ({ label, value, onChange, languages, placeholder }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const dropdownRef = useRef(null);
+
+  // Robustness: ensure languages is an array before filtering
+  const safeLanguages = Array.isArray(languages) ? languages : [];
+
+  const filteredLanguages = safeLanguages.filter(lang => 
+    (lang.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (lang.code || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const selectedLang = safeLanguages.find(l => l.code === value);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="custom-select-container" ref={dropdownRef}>
+      <button 
+        className="search-trigger" 
+        onClick={() => setIsOpen(!isOpen)}
+        type="button"
+      >
+        <span>{selectedLang ? selectedLang.name : label}</span>
+        <ChevronDown size={18} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="dropdown-menu">
+          <div className="search-input-wrapper">
+            <div className="relative">
+              <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
+              <input
+                type="text"
+                className="lang-search-field"
+                placeholder={placeholder}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                autoFocus
+                style={{ paddingLeft: '2.25rem' }}
+              />
+            </div>
+          </div>
+          <div className="languages-list">
+            {filteredLanguages.length > 0 ? (
+              filteredLanguages.map((l) => (
+                <div 
+                  key={l.code} 
+                  className={`lang-option ${l.code === value ? 'selected' : ''}`}
+                  onClick={() => {
+                    onChange(l.code);
+                    setIsOpen(false);
+                    setSearchTerm('');
+                  }}
+                >
+                  <span>{l.name}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span className="lang-code">{l.code}</span>
+                    {l.code === value && <Check size={14} />}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div style={{ padding: '1rem', textAlign: 'center', opacity: 0.5, fontSize: '0.9rem' }}>
+                No languages found
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 function App() {
   const [theme, setTheme] = useState('light');
-  const [languages, setLanguages] = useState([]);
+  const [languages, setLanguages] = useState([
+    { code: 'en', name: 'English' },
+    { code: 'es', name: 'Spanish' },
+    { code: 'fr', name: 'French' },
+    { code: 'de', name: 'German' },
+    { code: 'it', name: 'Italian' },
+    { code: 'pt', name: 'Portuguese' },
+    { code: 'ru', name: 'Russian' },
+    { code: 'zh', name: 'Chinese' },
+    { code: 'ja', name: 'Japanese' },
+    { code: 'ko', name: 'Korean' },
+    { code: 'ar', name: 'Arabic' },
+    { code: 'hi', name: 'Hindi' },
+  ]);
   const [sourceLang, setSourceLang] = useState('en');
   const [targetLang, setTargetLang] = useState('es');
   const [sourceText, setSourceText] = useState('');
@@ -37,7 +132,11 @@ function App() {
   const fetchLanguages = async () => {
     try {
       const res = await axios.get(`${API_URL}/languages`);
-      setLanguages(res.data);
+      if (Array.isArray(res.data)) {
+        setLanguages(res.data);
+      } else {
+        console.warn('API returned non-array language data:', res.data);
+      }
     } catch (err) {
       console.error('Error fetching languages', err);
     }
@@ -49,7 +148,6 @@ function App() {
       setHistory(res.data);
     } catch (err) {
       console.error('Error fetching history', err);
-      // for testing, ignore history error if backend goes offline
     }
   };
 
@@ -90,86 +188,6 @@ function App() {
 
   const toggleTheme = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
-  };
-
-  const SearchableLanguageSelect = ({ label, value, onChange, languages, placeholder }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
-    const dropdownRef = useRef(null);
-
-    const filteredLanguages = languages.filter(lang => 
-      lang.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lang.code.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    const selectedLang = languages.find(l => l.code === value);
-
-    useEffect(() => {
-      const handleClickOutside = (event) => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-          setIsOpen(false);
-        }
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    return (
-      <div className="custom-select-container" ref={dropdownRef}>
-        <button 
-          className="search-trigger" 
-          onClick={() => setIsOpen(!isOpen)}
-          type="button"
-        >
-          <span>{selectedLang ? selectedLang.name : label}</span>
-          <ChevronDown size={18} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-        </button>
-
-        {isOpen && (
-          <div className="dropdown-menu">
-            <div className="search-input-wrapper">
-              <div className="relative">
-                <Search size={16} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
-                <input
-                  type="text"
-                  className="lang-search-field"
-                  placeholder={placeholder}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  autoFocus
-                  style={{ paddingLeft: '2.25rem' }}
-                />
-              </div>
-            </div>
-            <div className="languages-list">
-              {filteredLanguages.length > 0 ? (
-                filteredLanguages.map((l) => (
-                  <div 
-                    key={l.code} 
-                    className={`lang-option ${l.code === value ? 'selected' : ''}`}
-                    onClick={() => {
-                      onChange(l.code);
-                      setIsOpen(false);
-                      setSearchTerm('');
-                    }}
-                  >
-                    <span>{l.name}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span className="lang-code">{l.code}</span>
-                      {l.code === value && <Check size={14} />}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div style={{ padding: '1rem', textAlign: 'center', opacity: 0.5, fontSize: '0.9rem' }}>
-                  No languages found
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    );
   };
 
   return (
