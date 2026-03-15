@@ -66,4 +66,4 @@ cd Quick-Translate
 This project is licensed under the MIT License.
 
 ---
-Built with ❤️ by [Himanshu Shekhar](https://github.com/himanshushekharon)
+Built by [Himanshu Shekhar](https://github.com/himanshushekharon)
