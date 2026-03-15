@@ -2,7 +2,7 @@
 
 Quick Translate is a modern, full-stack language translation application built with the MERN stack. It features a stunning interactive UI, searchable language selectors, and a temporary translation history system.
 
-![Quick Translate Screenshot](https://github.com/himanshushekharon/Quick-Translate/raw/main/screenshot.png) *(Placeholder: Add your actual screenshot here!)*
+![Quick Translate Screenshot](./screenshot.png)
 
 ## ✨ Features
 
