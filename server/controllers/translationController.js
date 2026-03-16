@@ -2,12 +2,12 @@ const TranslationHistory = require('../models/TranslationHistory');
 const Translation = require('../models/Translation');
 const axios = require('axios');
 
-// Switched to Lingva (Google Translate Mirror) for better stability
-const LINGVA_API_URL = 'https://lingva.ml/api/v1';
+// Use Google Translate unofficial API for better stability
+const GOOGLE_TRANSLATE_URL = 'https://translate.googleapis.com/translate_a/single?client=gtx&dt=t';
 
 const getLanguages = async (req, res) => {
-    // Fallback languages
-    const fallbackLanguages = [
+    // Standard language list since Google Translate doesn't have a simple keyless languages endpoint
+    const languages = [
         { code: 'en', name: 'English' },
         { code: 'es', name: 'Spanish' },
         { code: 'fr', name: 'French' },
@@ -20,20 +20,15 @@ const getLanguages = async (req, res) => {
         { code: 'ko', name: 'Korean' },
         { code: 'ar', name: 'Arabic' },
         { code: 'hi', name: 'Hindi' },
+        { code: 'bn', name: 'Bengali' },
+        { code: 'pa', name: 'Punjabi' },
+        { code: 'ta', name: 'Tamil' },
+        { code: 'te', name: 'Telugu' },
+        { code: 'gu', name: 'Gujarati' },
+        { code: 'kn', name: 'Kannada' },
+        { code: 'ml', name: 'Malayalam' }
     ];
-
-    try {
-        const response = await axios.get(`${LINGVA_API_URL}/languages`);
-        // Lingva returns { languages: [...] }
-        if (response.data && Array.isArray(response.data.languages)) {
-            res.json(response.data.languages);
-        } else {
-            res.json(fallbackLanguages);
-        }
-    } catch (error) {
-        console.error('Error fetching languages from Lingva:', error.message);
-        res.json(fallbackLanguages);
-    }
+    res.json(languages);
 };
 
 const translateText = async (req, res) => {
@@ -44,12 +39,17 @@ const translateText = async (req, res) => {
     }
 
     try {
-        // Lingva API Format: /api/v1/:source/:target/:text
         const encodedText = encodeURIComponent(text);
-        const response = await axios.get(`${LINGVA_API_URL}/${source}/${target}/${encodedText}`);
+        const url = `${GOOGLE_TRANSLATE_URL}&sl=${source}&tl=${target}&q=${encodedText}`;
+        const response = await axios.get(url);
 
-        if (response.data && response.data.translation) {
-            const translatedText = response.data.translation;
+        if (response.data && response.data[0]) {
+            let translatedText = '';
+            response.data[0].forEach((sentence) => {
+                if (sentence[0]) {
+                    translatedText += sentence[0];
+                }
+            });
 
             // Save to Translation (Persistent)
             const permanentTranslation = new Translation({
@@ -70,13 +70,12 @@ const translateText = async (req, res) => {
             await historyItem.save();
 
             res.json({ translatedText });
-        }
- else {
-            throw new Error('Invalid response from Lingva API');
+        } else {
+            throw new Error('Invalid response from Google Translate API');
         }
 
     } catch (error) {
-        console.error('Error translating text with Lingva:', error.message);
+        console.error('Error translating text:', error.message);
         res.status(500).json({ error: 'Translation failed', message: error.message });
     }
 };
