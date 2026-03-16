@@ -4,7 +4,7 @@ import { ArrowLeftRight, Copy, Moon, Sun, Loader2, ChevronDown, Search, Check } 
 import './App.css';
 import Squares from './Squares';
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const SearchableLanguageSelect = ({ label, value, onChange, languages, placeholder }) => {
   const [isOpen, setIsOpen] = useState(false);
