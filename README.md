@@ -2,6 +2,8 @@
 
 Quick Translate is a modern, full-stack language translation application built with the MERN stack. It features a stunning interactive UI, searchable language selectors, and a temporary translation history system.
 
+**🔗 [Live Demo](https://quick-translate-teal.vercel.app/) | ⚙️ [Backend API](https://quick-translate-jlng.onrender.com)**
+
 ![Quick Translate Screenshot](./screenshot.png)
 
 ## ✨ Features
@@ -18,7 +20,7 @@ Quick Translate is a modern, full-stack language translation application built w
 - **Frontend**: React.js, Vite, Three.js (for background shaders), Lucide-React (icons).
 - **Backend**: Node.js, Express.js.
 - **Database**: MongoDB (with TTL indexes for auto-deletion).
-- **API**: LibreTranslate API.
+- **API**: Google Translate (Unofficial API).
 
 ## 🛠️ Installation & Setup
 
